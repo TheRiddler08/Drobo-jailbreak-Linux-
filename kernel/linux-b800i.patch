@@ -1,0 +1,108 @@
+diff --git a/arch/arm/mach-mv78xx0/Kconfig b/arch/arm/mach-mv78xx0/Kconfig
+index 9de3bbc09..96a014bc8 100644
+--- a/arch/arm/mach-mv78xx0/Kconfig
++++ b/arch/arm/mach-mv78xx0/Kconfig
+@@ -21,4 +21,10 @@ config MACH_TERASTATION_WXL
+ 	  Say 'Y' here if you want your kernel to support the
+ 	  Buffalo WXL Nas.
+ 
++config MACH_DROBO_B800I
++	bool "Drobo B800i / DroboElite (experimental)"
++	help
++	  Say 'Y' here to run Linux as the only OS on a Drobo B800i
++	  or DroboElite, driving the drive bays with sata_mv.
++
+ endif
+diff --git a/arch/arm/mach-mv78xx0/Makefile b/arch/arm/mach-mv78xx0/Makefile
+index ddee6ae50..1cbeb53dc 100644
+--- a/arch/arm/mach-mv78xx0/Makefile
++++ b/arch/arm/mach-mv78xx0/Makefile
+@@ -3,3 +3,4 @@ ccflags-y := -I$(srctree)/arch/arm/plat-orion/include
+ 
+ obj-y				+= common.o mpp.o irq.o pcie.o
+ obj-$(CONFIG_MACH_TERASTATION_WXL) += buffalo-wxl-setup.o
++obj-$(CONFIG_MACH_DROBO_B800I) += drobo-b800i-setup.o
+diff --git a/arch/arm/mach-mv78xx0/drobo-b800i-setup.c b/arch/arm/mach-mv78xx0/drobo-b800i-setup.c
+new file mode 100644
+index 000000000..b104b2477
+--- /dev/null
++++ b/arch/arm/mach-mv78xx0/drobo-b800i-setup.c
+@@ -0,0 +1,69 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Drobo B800i / DroboElite ("Voltron", TD78200-A0) board support.
++ *
++ * Experimental. Runs Linux as the ONLY OS on the MV78200 (VxWorks/AMP
++ * disabled in U-Boot), so Linux owns the PCIe-attached Marvell 88SX7042
++ * SATA controller and drives it with sata_mv.
++ *
++ * Pin multiplexing (MPP) is deliberately left exactly as U-Boot set it:
++ * the B800i pinout is not yet known, and reprogramming pins blindly could
++ * cut power to bays or confuse the power controller.
++ */
++
++#include <linux/kernel.h>
++#include <linux/init.h>
++#include <linux/platform_device.h>
++#include <linux/mv643xx_eth.h>
++#include <asm/mach-types.h>
++#include <asm/mach/arch.h>
++#include "mv78xx0.h"
++#include "common.h"
++
++/* Let mv643xx_eth scan for the PHY, starting at the address U-Boot used. */
++static struct mv643xx_eth_platform_data b800i_ge00_data = {
++	.phy_addr	= MV643XX_ETH_PHY_ADDR_DEFAULT,
++};
++
++static struct mv643xx_eth_platform_data b800i_ge01_data = {
++	.phy_addr	= MV643XX_ETH_PHY_ADDR_DEFAULT,
++};
++
++static void __init b800i_init(void)
++{
++	mv78xx0_init();
++
++	/* Linux is the only OS, so it takes every on-chip peripheral. */
++	mv78xx0_uart0_init();
++	mv78xx0_uart1_init();
++	mv78xx0_ehci0_init();
++	mv78xx0_ge00_init(&b800i_ge00_data);
++	mv78xx0_ge01_init(&b800i_ge01_data);
++	mv78xx0_xor_init();
++	mv78xx0_crypto_init();
++	mv78xx0_i2c_init();
++}
++
++static int __init b800i_pci_init(void)
++{
++	/*
++	 * The drive bays hang off an 88SX7042 on PCIe. Bring up both PCIe
++	 * units on whichever core we were started on.
++	 */
++	if (machine_is_drobo_b800i())
++		mv78xx0_pcie_init(1, 1);
++
++	return 0;
++}
++subsys_initcall(b800i_pci_init);
++
++MACHINE_START(DROBO_B800I, "Drobo B800i / DroboElite (experimental)")
++	.atag_offset	= 0x100,
++	.nr_irqs	= MV78XX0_NR_IRQS,
++	.init_machine	= b800i_init,
++	.map_io		= mv78xx0_map_io,
++	.init_early	= mv78xx0_init_early,
++	.init_irq	= mv78xx0_init_irq,
++	.init_time	= mv78xx0_timer_init,
++	.restart	= mv78xx0_restart,
++MACHINE_END
+diff --git a/arch/arm/tools/mach-types b/arch/arm/tools/mach-types
+index 97e2bfa01..e82f814d5 100644
+--- a/arch/arm/tools/mach-types
++++ b/arch/arm/tools/mach-types
+@@ -599,3 +599,4 @@ missouri		MACH_MISSOURI		MISSOURI		5105
+ remarkable		MACH_REMARKABLE		REMARKABLE		5106
+ fa0113			MACH_FA0113		FA0113			5107
+ innova_statnettawm	MACH_INNOVA_STATNETTAWM	INNOVA_STATNETTAWM	5108
++drobo_b800i		MACH_DROBO_B800I	DROBO_B800I		9001

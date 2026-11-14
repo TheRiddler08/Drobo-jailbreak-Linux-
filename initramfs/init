@@ -1,0 +1,47 @@
+#!/bin/busybox sh
+# Drobo B800i test initramfs. Runs entirely from RAM: it never writes to
+# flash and never writes to any disk unless you type a command that does.
+/bin/busybox --install -s
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs dev /dev 2>/dev/null || mdev -s
+mkdir -p /dev/pts && mount -t devpts devpts /dev/pts
+echo /sbin/mdev > /proc/sys/kernel/hotplug
+mdev -s
+hostname b800i
+
+echo
+echo "=============================================="
+echo " Drobo B800i experimental Linux ($(uname -r))"
+echo "=============================================="
+echo "--- CPU / memory"
+grep -E "model name|Processor|Hardware" /proc/cpuinfo
+grep MemTotal /proc/meminfo
+echo "--- PCI devices (expect Marvell 11ab:7042 for the drive bays)"
+for d in /sys/bus/pci/devices/*; do
+  [ -e "$d/vendor" ] && echo "$(basename $d) $(cat $d/vendor):$(cat $d/device)"
+done
+echo "--- SATA / disks"
+dmesg | grep -i -E "sata_mv|ata[0-9]+:|scsi [0-9]" | tail -20
+for b in /sys/block/sd*; do
+  [ -e "$b" ] || continue
+  n=$(basename $b); s=$(cat $b/size)
+  echo "$n: $((s / 2048)) MiB  model: $(cat $b/device/model 2>/dev/null)"
+done
+echo "--- Network"
+for i in /sys/class/net/eth*; do
+  [ -e "$i" ] && echo "$(basename $i) mac $(cat $i/address)"
+done
+echo
+echo "Kernel log saved to /tmp/dmesg.txt. Type 'dhcp' to get an IP and"
+echo "start telnet (login-free, so only do this on a private network)."
+dmesg > /tmp/dmesg.txt
+cat > /bin/dhcp <<'EOF'
+#!/bin/sh
+for i in eth0 eth1; do ip link set $i up; udhcpc -i $i -q -n -t 5 && break; done
+telnetd -l /bin/sh && echo "telnetd running"
+ip -4 addr | grep inet
+EOF
+chmod +x /bin/dhcp
+
+exec setsid cttyhack /bin/sh
