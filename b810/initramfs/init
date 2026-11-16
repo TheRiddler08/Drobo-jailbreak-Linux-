@@ -1,0 +1,79 @@
+#!/bin/busybox sh
+# Drobo B810n / B810i discovery system. Runs entirely from RAM.
+# It only READS hardware: no flash writes, no disk writes, no GPIO or
+# I2C writes. Everything it finds goes to the console and /tmp/report.txt.
+/bin/busybox --install -s
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs dev /dev 2>/dev/null || mdev -s
+mkdir -p /dev/pts && mount -t devpts devpts /dev/pts
+echo /sbin/mdev > /proc/sys/kernel/hotplug
+mdev -s
+hostname b810
+
+report() {
+  echo "=============================================="
+  echo " Drobo B810 discovery ($(uname -r))"
+  echo "=============================================="
+  echo "--- Board / CPU / memory"
+  cat /proc/device-tree/model 2>/dev/null; echo
+  grep -c ^processor /proc/cpuinfo | sed 's/^/CPU cores: /'
+  grep MemTotal /proc/meminfo
+  echo "--- PCIe devices (vendor:device class). 1b4b = Marvell"
+  for d in /sys/bus/pci/devices/*; do
+    [ -e "$d/vendor" ] || continue
+    echo "$(basename $d)  $(cat $d/vendor):$(cat $d/device)  class $(cat $d/class)  driver: $(basename $(readlink $d/driver) 2>/dev/null)"
+  done
+  echo "--- SATA links"
+  dmesg | grep -E "ata[0-9]+: (SATA link|SATA max|DMA mask)|ahci|sata_mv" | tail -40
+  echo "--- Disks (bays are probably unpowered until we switch them on)"
+  for b in /sys/block/sd*; do
+    [ -e "$b" ] || continue
+    echo "$(basename $b): $(( $(cat $b/size) / 2048 )) MiB  $(cat $b/device/model 2>/dev/null)  via $(readlink -f $b/device | grep -o 'ata[0-9]*\|usb[0-9]*' | head -1)"
+  done
+  echo "--- Network ports"
+  for i in /sys/class/net/eth*; do
+    [ -e "$i" ] || continue
+    echo "$(basename $i)  mac $(cat $i/address)  $(readlink -f $i/device | sed 's#.*/##')"
+  done
+  echo "--- I2C buses and devices (read-only probe)"
+  for bus in /dev/i2c-*; do
+    [ -e "$bus" ] || continue
+    n=${bus#/dev/i2c-}
+    echo "bus $n:"
+    i2cdetect -y -r "$n" 2>&1
+  done
+  echo "--- Temperatures"
+  for t in /sys/class/thermal/thermal_zone*/temp /sys/class/hwmon/hwmon*/temp*_input; do
+    [ -e "$t" ] && echo "$t: $(( $(cat $t) / 1000 )) C"
+  done
+  echo "--- GPIO lines"
+  cat /sys/kernel/debug/gpio 2>/dev/null || (mount -t debugfs none /sys/kernel/debug && cat /sys/kernel/debug/gpio)
+}
+
+report 2>&1 | tee /tmp/report.txt
+dmesg > /tmp/dmesg.txt
+
+# dhcp: bring up each port in turn and start telnet (no login: private networks only)
+cat > /bin/dhcp <<'EOF'
+#!/bin/sh
+for i in eth0 eth1 eth2 eth3; do
+  ip link set $i up 2>/dev/null || continue
+  udhcpc -i $i -q -n -t 4 && break
+done
+telnetd -l /bin/sh && echo "telnetd running"
+ip -4 addr | grep inet
+EOF
+# pca BUS ADDR: dump a PCA9555-style expander's 8 registers (read-only)
+cat > /bin/pca <<'EOF'
+#!/bin/sh
+[ $# = 2 ] || { echo "usage: pca BUS ADDR   e.g. pca 1 0x23"; exit 1; }
+for r in 0 1 2 3 4 5 6 7; do printf "reg %d = %s\n" $r "$(i2cget -y $1 $2 $r b)"; done
+EOF
+chmod +x /bin/dhcp /bin/pca
+
+echo
+echo "Report saved to /tmp/report.txt, kernel log to /tmp/dmesg.txt."
+echo "Commands: 'dhcp' = network + telnet, 'pca BUS ADDR' = read an I2C expander."
+echo "Nothing has been written to the hardware. Bay power is still untouched."
+exec setsid cttyhack /bin/sh

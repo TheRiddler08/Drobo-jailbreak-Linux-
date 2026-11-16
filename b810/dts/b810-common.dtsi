@@ -1,0 +1,19 @@
+/*
+ * Drobo B810n / B810i (Marvell Armada XP MV78460, 2 GB) - experimental.
+ * Appended to drobo5n-base.dts (mainline armada-xp-db with internal
+ * registers at 0xd0000000, from github.com/georgestephanis/drobo-5n, GPL-2.0).
+ *
+ * Deliberately NOT carried over from the 5N fixups: the mSATA GPIO 66 hog
+ * and the bay-expander nodes. The B810's GPIO and I2C wiring is unknown, so
+ * nothing here drives a pin. The discovery system maps them first.
+ */
+
+/ {
+	model = "Drobo B810 (experimental)";
+
+	chosen {
+		bootargs = "console=ttyS0,115200 earlycon=uart8250,mmio32,0xd0012000 panic=0";
+		/delete-property/ linux,initrd-start;
+		/delete-property/ linux,initrd-end;
+	};
+};

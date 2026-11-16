@@ -2,7 +2,7 @@
 
 Source: `Drobo-B800i-Elite-firmware-2.0.6.zip` from the community archive at
 [dhomas1/DroboApps](https://github.com/dhomas1/DroboApps) (the firmware itself
-is not redistributed here). Reproduce with the scripts in `tools/`:
+is not redistributed here). Reproduce with the scripts in `tools/` (run from the repo root):
 
 ```
 unzip Drobo-B800i-Elite-firmware-2.0.6.zip      # -> .tdz

@@ -1,0 +1,18 @@
+/*
+ * Probe variant: enable every Armada XP PCIe port so we can see where the
+ * B810's SATA controllers sit. Only use this once U-Boot's "PEX" lines show
+ * how the lanes are strapped (see RUNBOOK.md).
+ */
+/ {
+	model = "Drobo B810 (experimental, all PCIe ports)";
+};
+&{/soc/pcie@82000000/pcie@1,0} { status = "okay"; };
+&{/soc/pcie@82000000/pcie@2,0} { status = "okay"; };
+&{/soc/pcie@82000000/pcie@3,0} { status = "okay"; };
+&{/soc/pcie@82000000/pcie@4,0} { status = "okay"; };
+&{/soc/pcie@82000000/pcie@5,0} { status = "okay"; };
+&{/soc/pcie@82000000/pcie@6,0} { status = "okay"; };
+&{/soc/pcie@82000000/pcie@7,0} { status = "okay"; };
+&{/soc/pcie@82000000/pcie@8,0} { status = "okay"; };
+&{/soc/pcie@82000000/pcie@9,0} { status = "okay"; };
+&{/soc/pcie@82000000/pcie@a,0} { status = "okay"; };
