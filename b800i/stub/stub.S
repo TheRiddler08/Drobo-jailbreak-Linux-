@@ -1,11 +1,12 @@
 @ Drobo B800i launcher, run from U-Boot with `go <addr>`.
-@ The zImage is appended directly after this stub (see Makefile).
+@ The zImage is appended directly after this stub (see build.sh).
 @
 @ 1. Optionally moves the SoC register window from REMAP_FROM to 0xf1000000,
 @    where mainline Linux expects it (only in the -d0 build; REMAP_FROM
 @    is the old base + 0x20000, the bridge block holding that register).
 @ 2. Prints "B800i stub OK" on UART0 so you know it ran.
-@ 3. Cleans/invalidates L1 caches and turns the MMU and caches off.
+@ 3. Cleans/invalidates the L1 caches (and cleans the L2 cache if U-Boot
+@    turned it on), then turns the MMU and L1 caches off.
 @ 4. Writes a minimal ATAG list at 0x100 (core + MEM_MB of RAM at 0).
 @ 5. Jumps to the zImage with r0=0, r1=machine 9001, r2=0x100.
 	.syntax unified
@@ -45,6 +46,13 @@ _start:
 	@ clean+invalidate D-cache (ARM926/Feroceon test-clean-invalidate loop)
 4:	mrc	p15, 0, r15, c7, c14, 3
 	bne	4b
+	@ Feroceon L2: if U-Boot enabled it (extra-features bit 22), write its
+	@ dirty lines to RAM, as Linux's cpu_feroceon_proc_fin does. Without
+	@ this, part of the kernel we just loaded could exist only in L2.
+	mrc	p15, 1, r0, c15, c1, 0
+	tst	r0, #0x00400000
+	movne	r0, #0
+	mcrne	p15, 1, r0, c15, c9, 0	@ clean all of L2
 	mov	r0, #0
 	mcr	p15, 0, r0, c7, c5, 0	@ invalidate I-cache
 	mcr	p15, 0, r0, c7, c10, 4	@ drain write buffer

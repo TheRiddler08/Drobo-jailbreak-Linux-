@@ -53,7 +53,9 @@ for v in f1 d0; do
   ${CROSS}gcc -march=armv5te -marm -nostdlib -Wl,--build-id=none -Ttext=0 $extra \
     -o "$WORK/stub-$v.elf" "$HERE/stub/stub.S"
   ${CROSS}objcopy -O binary -j .text "$WORK/stub-$v.elf" "$WORK/stub-$v.bin"
-  [ "$(stat -c %s "$WORK/stub-$v.bin")" = 256 ] || { echo "stub size changed: update payload check"; exit 1; }
+  # The kernel must start exactly at the stub's `payload` label.
+  want=$((0x$(${CROSS}nm "$WORK/stub-$v.elf" | awk '/ payload$/{print $1}')))
+  [ "$(stat -c %s "$WORK/stub-$v.bin")" = "$want" ] || { echo "stub size != payload offset"; exit 1; }
   cat "$WORK/stub-$v.bin" "$WORK/linux/arch/arm/boot/zImage" > "$OUT/b800i-linux-$v.bin"
 done
 

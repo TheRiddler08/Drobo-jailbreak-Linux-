@@ -7,8 +7,6 @@ mount -t proc proc /proc
 mount -t sysfs sys /sys
 mount -t devtmpfs dev /dev 2>/dev/null || mdev -s
 mkdir -p /dev/pts && mount -t devpts devpts /dev/pts
-echo /sbin/mdev > /proc/sys/kernel/hotplug
-mdev -s
 hostname b810
 
 report() {
@@ -27,6 +25,7 @@ report() {
   echo "--- SATA links"
   dmesg | grep -E "ata[0-9]+: (SATA link|SATA max|DMA mask)|ahci|sata_mv" | tail -40
   echo "--- Disks (bays are probably unpowered until we switch them on)"
+  echo "    A small disk \"via usb\" is the internal stick holding the stock firmware: never write to it."
   for b in /sys/block/sd*; do
     [ -e "$b" ] || continue
     echo "$(basename $b): $(( $(cat $b/size) / 2048 )) MiB  $(cat $b/device/model 2>/dev/null)  via $(readlink -f $b/device | grep -o 'ata[0-9]*\|usb[0-9]*' | head -1)"

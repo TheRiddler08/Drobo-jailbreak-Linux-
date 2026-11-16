@@ -22,16 +22,23 @@ power for 10 seconds and the unit is back on stock firmware.
 
 1. **Open it up.** Unplug, remove all drives, open the case. Photograph the
    whole motherboard and the drive backplane (both sides if you can).
-2. **Find the consoles.** Look for two 4-pin headers. On a B810i, one
-   header shows Marvell U-Boot then VxWorks, the other shows Linux booting to
-   a root shell; both run at 115200 8N1. Confirm GND with a multimeter
-   (continuity to chassis) before connecting.
+2. **Find the consoles.** There are two serial ports, both 115200 8N1. A
+   B810i owner found one showing Marvell U-Boot then VxWorks, and the other
+   showing Linux booting to a root shell. **We need the U-Boot one** (the
+   chip's UART0): the stub and our kernel only print there. On the 5N that
+   port is four bare holes with no header fitted (you solder three wires),
+   and the factory header is the Linux one. Photograph both before
+   touching anything, and confirm GND with a multimeter (continuity to
+   chassis) before connecting.
 3. **Wire and log.** Adapter GND to GND, TX to board RX, RX to board TX.
    115200 8N1, no flow control. Turn on logging to a file.
 4. **Capture a full stock boot from each header.** We especially want the
    U-Boot lines that start with `PEX` (they say how the PCIe lanes are set
    up) and the whole Linux log.
-5. **Catch U-Boot.** Power-cycle and press a key during the countdown. Run:
+5. **Catch U-Boot.** On the 5N the boot delay is 0, so there is no
+   countdown: unplug, start tapping the space bar, plug in, and keep
+   tapping until `Marvell>>` appears. Then type slowly, one command at a
+   time. This U-Boot drops characters when they arrive too fast. Run:
    ```
    version
    bdinfo
@@ -60,10 +67,15 @@ Files (in `prebuilt/`):
    ```
    setenv ipaddr 192.168.1.50
    setenv serverip 192.168.1.10
-   tftpboot 0x3f00000 b810-safe.dtb
-   tftpboot 0x8000000 kernel.bin
-   go 0x8000000
+   setenv netmask 255.255.255.0
+   tftpboot 3f00000 b810-safe.dtb
+   tftpboot 8000000 kernel.bin
+   usb stop
+   go 8000000
    ```
+   These settings live in RAM only. `usb stop` matters: on the 5N, without
+   it the USB controller keeps writing into memory under Linux. The two
+   addresses must stay exactly as shown.
 
 ### What success looks like
 1. `#STUB alive ...`, `#STUB caches off, jumping`, CPU reset and copy lines
@@ -74,7 +86,7 @@ Files (in `prebuilt/`):
 4. A `#` prompt. `dhcp` starts networking and telnet; `pca BUS ADDR` reads
    an I²C expander without changing it.
 
-Disks probably won't show up yet: on the 5N, bays stay unpowered until
+Drive-bay disks probably won't show up yet: on the 5N, bays stay unpowered until
 Linux switches them on through an I²C expander. Send me the report and I'll
 work out the B810's bay-power map before we switch anything on.
 
@@ -88,7 +100,9 @@ work out the B810's bay-power map before we switch anything on.
 ## Planned
 - Map bay power, bay LEDs, fan and power button (like the 5N's `drobo-bays`,
   `drobo-fand`, `drobo-powerbtn`)
-- Back up the flash from the running Linux
+- Back up the internal USB stick (it holds the stock firmware; a B810i
+  owner found `vxworks` and `lximage` on it) and the SPI flash, from the
+  running Linux, before anything is changed
 - Persistent Debian 13 install with mdadm, Samba/NFS, and an iSCSI target
   (LIO) on the B810i
 - Set U-Boot to boot Linux on its own (`amp_enable no`, see the 5N README)

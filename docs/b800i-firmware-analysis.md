@@ -8,7 +8,7 @@ is not redistributed here). Reproduce with the scripts in `tools/` (run from the
 unzip Drobo-B800i-Elite-firmware-2.0.6.zip      # -> .tdz
 unzip Drobo-B800i-Elite-firmware-2.0.6.tdz      # -> release.Drobo_elite1.tdf
 python3 tools/scan.py  release.Drobo_elite1.tdf
-python3 tools/split.py release.Drobo_elite1.tdf out/
+python3 tools/split.py release.Drobo_elite1.tdf out/   # writes img_*.bin, .dec, .kernel
 ```
 
 ## Container (`.tdf`)

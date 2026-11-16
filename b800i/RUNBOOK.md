@@ -28,8 +28,12 @@ the power for 10 seconds and the unit boots stock firmware again.
    a file.
 4. **Capture a stock boot.** Power on and save everything from both headers
    (move the adapter between them across two boots if you only have one).
-5. **Interrupt U-Boot.** Power-cycle and press a key during the U-Boot
-   countdown on the header that prints `Marvell>>` or similar. Then run:
+5. **Interrupt U-Boot.** Each header may have its own U-Boot. Use the one
+   that goes on to start VxWorks: that core owns the drive controller, and
+   our stub and kernel print on its UART. There may be no countdown (on the
+   Drobo 5N the delay is 0), so unplug, start tapping the space bar, plug
+   in, and keep tapping until a `Marvell>>` prompt appears. Type slowly,
+   one command at a time. Then run:
    ```
    version
    bdinfo
