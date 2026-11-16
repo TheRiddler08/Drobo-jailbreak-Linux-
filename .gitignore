@@ -1,2 +1,6 @@
 work/
 out/
+__pycache__/
+*.pyc
+logs/*.log
+!logs/README.md

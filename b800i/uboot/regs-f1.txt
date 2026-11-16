@@ -1,0 +1,3 @@
+# Is the chip's register window at 0xf1000000? Prints one word if so.
+# If this hangs, unplug the power and try regs-d0.txt instead.
+md.l 0xf1020080 1

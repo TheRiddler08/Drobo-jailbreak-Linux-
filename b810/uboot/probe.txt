@@ -1,0 +1,8 @@
+# Session 2, step 1: load the probe stub and run it. It prints one line of
+# CPU state and returns to the U-Boot prompt. Nothing is changed.
+# Edit the two addresses if your network differs. They live in RAM only.
+setenv ipaddr 192.168.1.50
+setenv serverip 192.168.1.10
+setenv netmask 255.255.255.0
+tftpboot 8000000 probe.bin
+go 8000000

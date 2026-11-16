@@ -37,12 +37,27 @@ chip, including the drive controllers.
 | Path | What |
 |---|---|
 | `b810/RUNBOOK.md` | Bench steps for the B810n/B810i |
-| `b810/prebuilt/` | `kernel.bin`, `b810-safe.dtb`, `b810-probe.dtb` |
+| `b810/prebuilt/` | `probe.bin`, `kernel.bin`, `b810-safe.dtb`, `b810-probe.dtb`, checksums |
+| `b810/uboot/` | U-Boot command files for each step, typed by `tools/drobo-console.py` |
 | `b810/dts/`, `b810/stub/`, `b810/kernel/`, `b810/initramfs/` | Sources: device trees, 5N stub, kernel config, discovery system |
 | `b810/build.sh` | Rebuilds the B810 files from source |
 | `b800i/` | The same set for the B800i (kernel patch with a board file) |
 | `docs/b800i-firmware-analysis.md` | What's inside the stock B800i firmware |
-| `tools/` | Scripts that unpack and analyze stock `.tdf` firmware |
+| `docs/hardware-notes.md` | What is known vs guessed about each unit, with sources |
+| `tools/drobo-console.py` | Serial helper: catches U-Boot, types commands safely, logs everything |
+| `tools/tftpd.py` | Small read-only TFTP server (from the 5N project) |
+| `tools/scan.py`, `tools/split.py` | Unpack and analyze stock `.tdf` firmware |
+| `logs/` | Console captures from real units |
+
+## Quick start (B810n)
+With the serial adapter wired to the U-Boot console (see the runbook):
+```
+pip install pyserial
+python3 tools/drobo-console.py PORT run b810/uboot/session1.txt --catch   # start, then plug the Drobo in
+```
+That records U-Boot's version and settings and changes nothing. The
+[B810 runbook](b810/RUNBOOK.md) continues from there: a probe that returns
+to U-Boot, then a RAM boot of Linux.
 
 ## Building
 ```
@@ -59,6 +74,7 @@ b800i/build.sh
 - [x] Analyze stock B800i firmware
 - [x] B800i kernel + board file, RAM-only system
 - [x] B810 kernel, device trees, 5N stub, discovery system
+- [x] Serial helper, TFTP server, probe stub, checksums
 - [ ] B810n session 1: serial logs, U-Boot environment, board photos
 - [ ] B810n session 2: RAM boot, map PCIe, I²C, GPIOs
 - [ ] Bay power, LEDs, fan, power button

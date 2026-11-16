@@ -33,7 +33,8 @@ the power for 10 seconds and the unit boots stock firmware again.
    our stub and kernel print on its UART. There may be no countdown (on the
    Drobo 5N the delay is 0), so unplug, start tapping the space bar, plug
    in, and keep tapping until a `Marvell>>` prompt appears. Type slowly,
-   one command at a time. Then run:
+   one command at a time. `tools/drobo-console.py` does all of this for
+   you (see below). Then run:
    ```
    version
    bdinfo
@@ -44,6 +45,15 @@ the power for 10 seconds and the unit boots stock firmware again.
    ```
    The last two tell us where the chip's registers live. One may hang; if
    so, power-cycle and skip it. Then power off.
+   With the helper tool (`pip install pyserial`), from the repo's top
+   folder, the same steps are:
+   ```
+   python3 tools/drobo-console.py PORT run b800i/uboot/session1.txt --catch --log logs/b800i-uboot.log
+   python3 tools/drobo-console.py PORT run b800i/uboot/regs-f1.txt --log logs/b800i-uboot.log
+   python3 tools/drobo-console.py PORT run b800i/uboot/regs-d0.txt --log logs/b800i-uboot.log
+   ```
+   Start the first one before plugging the Drobo in. If a `regs` command
+   hangs, power-cycle, catch U-Boot again and run the other one.
 6. **Send me** the logs and photos. Stop here for session 1.
 
 ## Session 2: boot our Linux from RAM (after I review session 1)
@@ -53,8 +63,9 @@ Pick the file based on step 5:
 - Register base reads back as `d00000xx` → `b800i-linux-d0.bin`
 
 Loading over the network (fast):
-1. Run a TFTP server on your PC (Tftpd64 on Windows, `dnsmasq` or
-   `tftpd-hpa` on Linux/Mac) serving the .bin file.
+1. Run a TFTP server on your PC serving the .bin file:
+   `python3 tools/tftpd.py --root b800i/prebuilt` (check the files first
+   with `sha256sum -c SHA256SUMS` in that folder).
 2. Cable a Drobo Ethernet port straight to the PC. Give the PC a static IP
    of `192.168.1.10`.
 3. Interrupt U-Boot **before** it starts VxWorks, then run:

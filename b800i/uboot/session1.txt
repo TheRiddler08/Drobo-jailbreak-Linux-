@@ -1,0 +1,5 @@
+# Session 1: read-only look at U-Boot. Changes nothing.
+version
+bdinfo
+printenv
+help

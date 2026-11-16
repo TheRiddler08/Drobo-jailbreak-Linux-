@@ -1,0 +1,10 @@
+# Session 2, step 2: boot Linux 6.12 from RAM. Nothing is written to flash
+# or disks; unplug the power to return to stock firmware.
+# The load addresses must stay exactly as they are.
+setenv ipaddr 192.168.1.50
+setenv serverip 192.168.1.10
+setenv netmask 255.255.255.0
+tftpboot 3f00000 b810-safe.dtb
+tftpboot 8000000 kernel.bin
+usb stop
+go 8000000

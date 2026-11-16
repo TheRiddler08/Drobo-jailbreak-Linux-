@@ -6,7 +6,7 @@
 #                    libssl-dev cpio git make python3
 #   ./build.sh
 #
-# Output in out/: kernel.bin, b810-safe.dtb, b810-probe.dtb (see RUNBOOK.md)
+# Output in out/: probe.bin, kernel.bin, b810-safe.dtb, b810-probe.dtb, SHA256SUMS
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -53,6 +53,12 @@ ${CROSS}gcc -march=armv7-a -marm -mfloat-abi=soft -c \
 ${CROSS}ld -Ttext=0 --build-id=none -o "$WORK/stub.elf" "$WORK/stub.o"
 ${CROSS}objcopy -O binary -j .text "$WORK/stub.elf" "$WORK/stub.bin"
 
+# 5b. Probe stub: prints one line of CPU state and returns to U-Boot.
+${CROSS}gcc -march=armv7-a -marm -mfloat-abi=soft -c -DPROBE -DIMG_LEN=0 \
+  -o "$WORK/probe.o" "$HERE/stub/stub.S"
+${CROSS}ld -Ttext=0 --build-id=none -o "$WORK/probe.elf" "$WORK/probe.o"
+${CROSS}objcopy -O binary -j .text "$WORK/probe.elf" "$OUT/probe.bin"
+
 # 6. Device trees
 cat "$HERE/dts/drobo5n-base.dts" "$HERE/dts/b810-common.dtsi" > "$WORK/b810-safe.dts"
 cat "$HERE/dts/drobo5n-base.dts" "$HERE/dts/b810-common.dtsi" "$HERE/dts/b810-probe-pcie.dtsi" > "$WORK/b810-probe.dts"
@@ -62,5 +68,6 @@ dtc -q -I dts -O dtb -o "$OUT/b810-probe.dtb" "$WORK/b810-probe.dts"
 # 7. kernel.bin = stub + Image
 python3 "$HERE/pack.py" "$WORK/stub.bin" "$K/arch/arm/boot/Image" "$OUT/kernel.bin"
 
+(cd "$OUT" && sha256sum probe.bin kernel.bin b810-safe.dtb b810-probe.dtb > SHA256SUMS)
 ls -la "$OUT"
 echo "Done. See RUNBOOK.md: DTB at 0x3f00000, kernel.bin at 0x8000000, go 0x8000000."

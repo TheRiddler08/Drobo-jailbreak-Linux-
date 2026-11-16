@@ -59,5 +59,6 @@ for v in f1 d0; do
   cat "$WORK/stub-$v.bin" "$WORK/linux/arch/arm/boot/zImage" > "$OUT/b800i-linux-$v.bin"
 done
 
+(cd "$OUT" && sha256sum b800i-linux-f1.bin b800i-linux-d0.bin > SHA256SUMS)
 ls -la "$OUT"
 echo "Done. Load at 0x2000000 and run 'go 0x2000000' (see RUNBOOK.md)."

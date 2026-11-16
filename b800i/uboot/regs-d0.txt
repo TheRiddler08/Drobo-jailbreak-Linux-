@@ -1,0 +1,2 @@
+# Is the chip's register window at 0xd0000000? Prints one word if so.
+md.l 0xd0020080 1
